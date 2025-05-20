@@ -8,11 +8,12 @@ body {
 
 @layer base {
   :root {
+    /* Light Theme (as per PRD) */
     --background: 0 0% 94.1%; /* Light Gray #F0F0F0 */
     --foreground: 240 5% 25%; /* Dark Neutral Gray for text */
 
     --card: 0 0% 100%; /* White */
-    --card-foreground: 240 5% 25%; /* Dark Neutral Gray for card text */
+    --card-foreground: 240 5% 25%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 240 5% 25%;
@@ -24,7 +25,7 @@ body {
     --secondary-foreground: 240 5% 25%;
 
     --muted: 0 0% 88%; /* Muted gray, slightly darker than background */
-    --muted-foreground: 0 0% 45%; /* Default muted foreground */
+    --muted-foreground: 0 0% 45%;
 
     --accent: 350.8 100% 85.7%; /* Soft Pink #FFB6C1 */
     --accent-foreground: 350 70% 40%; /* Darker Pink for text on accent */
@@ -32,8 +33,8 @@ body {
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 87.8%; /* Border color, visible on light gray */
-    --input: 0 0% 87.8%; /* Input background/border */
+    --border: 0 0% 87.8%;
+    --input: 0 0% 87.8%;
     --ring: 280 86.8% 53.3%; /* Ring color (Primary) */
 
     --radius: 0.5rem;
@@ -44,7 +45,6 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
-    /* Sidebar specific colors - can be adjusted if sidebar is heavily used */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -56,52 +56,50 @@ body {
   }
 
   .dark {
-    /* For dark mode, we'd need a different strategy, perhaps inverting or using a dark purple theme.
-       Keeping defaults for now but ideally these would be custom dark theme colors.
-       Example: A dark purple theme might use a very dark purple as background.
-    */
-    --background: 280 10% 10%; /* Dark Purple */
-    --foreground: 280 10% 90%; /* Light Purple/Gray */
+    /* Dark Theme (Cyberpunk Inspired) */
+    --background: 260 20% 8%; /* Very dark desaturated purple/blue */
+    --foreground: 260 10% 85%; /* Light grayish lavender */
 
-    --card: 280 10% 15%;
-    --card-foreground: 280 10% 90%;
+    --card: 260 20% 12%; /* Slightly lighter dark */
+    --card-foreground: 260 10% 85%;
 
-    --popover: 280 10% 15%;
-    --popover-foreground: 280 10% 90%;
+    --popover: 260 20% 12%;
+    --popover-foreground: 260 10% 85%;
 
-    --primary: 280 86.8% 63.3%; /* Lighter Purple for dark mode */
-    --primary-foreground: 280 10% 10%; /* Dark for on primary */
+    --primary: 280 90% 65%; /* Brighter/more electric Purple for dark mode */
+    --primary-foreground: 280 10% 10%; /* Dark text on bright primary */
 
-    --secondary: 280 10% 25%;
-    --secondary-foreground: 280 10% 90%;
+    --secondary: 260 20% 20%; /* Darker secondary for depth */
+    --secondary-foreground: 260 10% 85%;
 
-    --muted: 280 10% 20%;
-    --muted-foreground: 280 10% 60%;
+    --muted: 260 20% 15%;
+    --muted-foreground: 260 10% 60%; /* Lighter muted text for readability */
 
-    --accent: 350.8 100% 75.7%; /* Slightly darker/more saturated pink for dark mode */
-    --accent-foreground: 350 10% 10%;
+    --accent: 340 90% 70%; /* Brighter, more electric/neon Pink for dark mode */
+    --accent-foreground: 340 10% 10%; /* Dark text on bright accent */
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 70% 55%; /* Slightly adjusted destructive */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 280 10% 25%;
-    --input: 280 10% 25%;
-    --ring: 280 86.8% 63.3%;
+    --border: 260 20% 25%; /* Darker borders */
+    --input: 260 20% 25%; /* Darker input backgrounds */
+    --ring: 280 90% 65%; /* Ring color (Primary for dark) */
 
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    /* Chart colors for dark mode can be adjusted for better visibility */
+    --chart-1: 280 80% 70%; /* Lighter purple */
+    --chart-2: 340 80% 70%; /* Lighter pink */
+    --chart-3: 180 70% 60%; /* Cyan/Teal */
+    --chart-4: 60 80% 65%;  /* Neon Yellow/Lime */
+    --chart-5: 220 75% 70%; /* Electric Blue */
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 260 20% 10%;
+    --sidebar-foreground: 260 10% 80%;
+    --sidebar-primary: 280 90% 65%;
+    --sidebar-primary-foreground: 280 10% 10%;
+    --sidebar-accent: 260 20% 18%;
+    --sidebar-accent-foreground: 260 10% 85%;
+    --sidebar-border: 260 20% 22%;
+    --sidebar-ring: 280 90% 65%;
   }
 }
 
@@ -111,5 +109,7 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    /* Add a subtle transition for theme changes */
+    @apply transition-colors duration-300 ease-in-out;
   }
 }

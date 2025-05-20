@@ -2,15 +2,17 @@
 'use client';
 
 import Link from 'next/link';
-import { Disc3, LogIn, LogOut, LayoutDashboard } from 'lucide-react'; // Using Disc3 as a vinyl-like icon
+import { Disc3, LogIn, LogOut, LayoutDashboard, Sun, Moon } from 'lucide-react';
 import { Button } from './ui/button';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function SiteHeader() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     setIsMounted(true);
@@ -18,11 +20,12 @@ export default function SiteHeader() {
     setIsAdminLoggedIn(loggedIn);
   }, []);
   
-  // Effect to update login state if localStorage changes (e.g. logout from admin page)
   useEffect(() => {
-    const handleStorageChange = () => {
-      const loggedIn = localStorage.getItem('vinylAdminLoggedIn') === 'true';
-      setIsAdminLoggedIn(loggedIn);
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'vinylAdminLoggedIn') {
+        const loggedIn = localStorage.getItem('vinylAdminLoggedIn') === 'true';
+        setIsAdminLoggedIn(loggedIn);
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -35,7 +38,9 @@ export default function SiteHeader() {
   const handleLogout = () => {
     localStorage.removeItem('vinylAdminLoggedIn');
     setIsAdminLoggedIn(false);
-    router.push('/'); // Or /login
+    // Dispatch a storage event so other tabs/components can react if needed
+    window.dispatchEvent(new StorageEvent('storage', { key: 'vinylAdminLoggedIn' }));
+    router.push('/'); 
   };
 
   if (!isMounted) {
@@ -46,7 +51,10 @@ export default function SiteHeader() {
             <Disc3 className="w-8 h-8" />
             <span>VinylVision</span>
           </Link>
-          <div className="h-10 w-24 bg-muted animate-pulse rounded-md"></div> {/* Placeholder for button */}
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 bg-muted animate-pulse rounded-md"></div> {/* Placeholder for theme toggle */}
+            <div className="h-10 w-24 bg-muted animate-pulse rounded-md"></div> {/* Placeholder for login button */}
+          </div>
         </div>
       </header>
     );
@@ -61,6 +69,14 @@ export default function SiteHeader() {
         </Link>
         
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+          >
+            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </Button>
           {isAdminLoggedIn ? (
             <>
               <Button variant="outline" size="sm" asChild>
