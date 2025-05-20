@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Album, Filters, SortKey, Artista, Genero } from '@/lib/types';
-import { getAlbums, getArtistas, mockGeneros } from '@/lib/mock-data'; // Updated import
+import { getAlbums, getArtistas, getGeneros } from '@/lib/mock-data'; 
 import AlbumCard from '@/components/AlbumCard';
 import FilterSortControls from '@/components/FilterSortControls';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,8 @@ import { Search, RefreshCw } from 'lucide-react';
 
 export default function HomePage() {
   const [allAlbums, setAllAlbums] = useState<Album[]>([]);
-  const [allArtistas, setAllArtistas] = useState<Artista[]>([]); // State for artistas
+  const [allArtistas, setAllArtistas] = useState<Artista[]>([]); 
+  const [allGeneros, setAllGeneros] = useState<Genero[]>([]);
   const [displayedAlbums, setDisplayedAlbums] = useState<Album[]>([]);
   const [filters, setFilters] = useState<Filters>({});
   const [sortKey, setSortKey] = useState<SortKey>('title_asc');
@@ -21,20 +22,24 @@ export default function HomePage() {
   useEffect(() => {
     const loadData = () => {
       setAllAlbums(getAlbums());
-      setAllArtistas(getArtistas()); // Load artistas
+      setAllArtistas(getArtistas());
+      setAllGeneros(getGeneros());
       setIsLoading(false);
     };
     loadData(); 
 
-    const handleDataUpdate = () => { // Combined handler for albums and artistas
+    const handleDataUpdate = () => { 
       loadData(); 
     };
 
     window.addEventListener('albumsUpdated', handleDataUpdate);
-    window.addEventListener('artistasUpdated', handleDataUpdate); // Listen for artist updates
+    window.addEventListener('artistasUpdated', handleDataUpdate);
+    window.addEventListener('generosUpdated', handleDataUpdate); // Listen for genre updates
+    // Add sellosUpdated listener if sellos become filterable in the future
     return () => {
       window.removeEventListener('albumsUpdated', handleDataUpdate);
       window.removeEventListener('artistasUpdated', handleDataUpdate);
+      window.removeEventListener('generosUpdated', handleDataUpdate);
     };
   }, []);
 
@@ -133,8 +138,8 @@ export default function HomePage() {
       </div>
 
       <FilterSortControls
-        allArtists={allArtistas} // Pass dynamic artistas
-        allGenres={mockGeneros}   
+        allArtists={allArtistas} 
+        allGenres={allGeneros}   // Pass dynamic generos
         onFilterChange={handleFilterChange}
         onSortChange={handleSortChange}
         initialFilters={filters}
@@ -156,5 +161,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

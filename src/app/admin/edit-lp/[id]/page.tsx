@@ -10,13 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// No longer using Select for genre and sello
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Save, PlusCircle, Trash2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { findAlbumById, updateAlbum, getArtistas, mockGeneros, mockSellos, addOrGetArtista } from '@/lib/mock-data';
+import { findAlbumById, updateAlbum, addOrGetArtista, addOrGetGenero, addOrGetSello } from '@/lib/mock-data';
 import type { Album, Artista } from '@/lib/types';
 
 const songSchema = z.object({
@@ -49,13 +49,6 @@ export default function EditLpPage() {
 
   const [isLoadingAlbum, setIsLoadingAlbum] = useState(true);
   const [albumToEdit, setAlbumToEdit] = useState<Album | undefined>(undefined);
-  // Artistas disponibles no se usa en edit, se crea dinámicamente. Pero lo dejamos por si se añade un select en el futuro.
-  const [availableArtistas, setAvailableArtistas] = useState<Artista[]>([]);
-
-
-  useEffect(() => {
-    setAvailableArtistas(getArtistas());
-  }, []);
 
   const form = useForm<AlbumFormValues>({
     resolver: zodResolver(albumFormSchema),
@@ -121,17 +114,18 @@ export default function EditLpPage() {
         albumArtistas = [addOrGetArtista(data.artista)];
     }
 
-    const selectedSello = mockSellos.find(s => s.nombre === data.sello_nombre);
+    const genero = addOrGetGenero(data.genero_nombre);
+    const sello = addOrGetSello(data.sello_nombre);
 
     const updatedAlbumData: Album = {
       ...albumToEdit,
       titulo: data.titulo,
       artistas: albumArtistas,
       anio_lanzamiento: Number(data.anio_lanzamiento),
-      genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || albumToEdit.genero_id || 0,
-      genero_nombre: data.genero_nombre,
-      sello_id: selectedSello?.id_sello || albumToEdit.sello_id || 0,
-      sello_nombre: selectedSello?.nombre || data.sello_nombre,
+      genero_id: genero.id_genero,
+      genero_nombre: genero.nombre,
+      sello_id: sello.id_sello,
+      sello_nombre: sello.nombre,
       url_caratula: data.url_caratula || 'https://placehold.co/300x300.png',
       es_compilacion: isCompilation,
       canciones: data.canciones ? data.canciones.map((c, idx) => {
@@ -236,18 +230,9 @@ export default function EditLpPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Género</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona un género" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {mockGeneros.map(g => (
-                          <SelectItem key={g.id_genero} value={g.nombre}>{g.nombre}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                     <FormControl>
+                      <Input placeholder="Ej: Rock, Electronic, Jazz" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -258,18 +243,9 @@ export default function EditLpPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Sello Discográfico</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona un sello" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {mockSellos.map(s => (
-                          <SelectItem key={s.id_sello} value={s.nombre}>{s.nombre}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input placeholder="Ej: EMI, Warp Records" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
