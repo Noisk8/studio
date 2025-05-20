@@ -16,14 +16,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Save, PlusCircle, Trash2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { findAlbumById, updateAlbum, mockGeneros, mockArtistas, mockSellos } from '@/lib/mock-data';
+import { findAlbumById, updateAlbum, getArtistas, mockGeneros, mockSellos, addOrGetArtista } from '@/lib/mock-data';
 import type { Album, Artista } from '@/lib/types';
 
 const songSchema = z.object({
   id_cancion: z.number().optional(),
   titulo: z.string().min(1, "El título de la canción es requerido."),
   bpm: z.coerce.number().positive("BPM debe ser un número positivo.").optional().or(z.literal('')),
-  artista_principal_nombre: z.string().optional(), // Para compilaciones
+  artista_principal_nombre: z.string().optional(), 
 });
 
 const albumFormSchema = z.object({
@@ -49,6 +49,12 @@ export default function EditLpPage() {
 
   const [isLoadingAlbum, setIsLoadingAlbum] = useState(true);
   const [albumToEdit, setAlbumToEdit] = useState<Album | undefined>(undefined);
+  const [availableArtistas, setAvailableArtistas] = useState<Artista[]>([]);
+
+
+  useEffect(() => {
+    setAvailableArtistas(getArtistas());
+  }, []);
 
   const form = useForm<AlbumFormValues>({
     resolver: zodResolver(albumFormSchema),
@@ -106,17 +112,12 @@ export default function EditLpPage() {
     }
 
     const isCompilation = data.artista.toLowerCase().includes('various');
-    let artistsArray: Artista[];
+    let albumArtistas: Artista[];
 
     if (isCompilation) {
-        const va = mockArtistas.find(a => a.nombre.toLowerCase() === 'various artists');
-        artistsArray = va ? [va] : [{id_artista: Date.now() + Math.random(), nombre: 'Various Artists'}];
+        albumArtistas = [addOrGetArtista('Various Artists')];
     } else {
-        let existingArtist = mockArtistas.find(a => a.nombre.toLowerCase() === data.artista.toLowerCase());
-        if (!existingArtist) {
-            existingArtist = { id_artista: albumToEdit.artistas[0]?.id_artista || Date.now() + Math.random(), nombre: data.artista };
-        }
-        artistsArray = [existingArtist];
+        albumArtistas = [addOrGetArtista(data.artista)];
     }
 
     const selectedSello = mockSellos.find(s => s.nombre === data.sello_nombre);
@@ -124,7 +125,7 @@ export default function EditLpPage() {
     const updatedAlbumData: Album = {
       ...albumToEdit,
       titulo: data.titulo,
-      artistas: artistsArray,
+      artistas: albumArtistas,
       anio_lanzamiento: Number(data.anio_lanzamiento),
       genero_nombre: data.genero_nombre,
       genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || albumToEdit.genero_id,
@@ -133,12 +134,16 @@ export default function EditLpPage() {
       url_caratula: data.url_caratula || 'https://placehold.co/300x300.png',
       es_compilacion: isCompilation,
       canciones: data.canciones ? data.canciones.map((c, idx) => {
+        let songArtistasArray: Artista[] = albumArtistas;
+        if (isCompilation && c.artista_principal_nombre) {
+            songArtistasArray = [addOrGetArtista(c.artista_principal_nombre)];
+        }
         return {
           id_cancion: c.id_cancion || Date.now() + idx + Math.random(),
           titulo: c.titulo,
           bpm: c.bpm ? Number(c.bpm) : undefined,
           artista_principal_nombre: isCompilation ? c.artista_principal_nombre : undefined,
-          artistas: artistsArray 
+          artistas: songArtistasArray
         };
       }) : [],
     };

@@ -15,13 +15,14 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { addAlbum, mockGeneros, mockArtistas, mockSellos, getAlbums } from '@/lib/mock-data';
+import { addAlbum, getArtistas, mockGeneros, mockSellos, addOrGetArtista } from '@/lib/mock-data';
 import type { Album, Artista } from '@/lib/types';
+import { useEffect, useState } from 'react';
 
 const songSchema = z.object({
   titulo: z.string().min(1, "El título de la canción es requerido."),
   bpm: z.coerce.number().positive("BPM debe ser un número positivo.").optional().or(z.literal('')),
-  artista_principal_nombre: z.string().optional(), // Para compilaciones
+  artista_principal_nombre: z.string().optional(),
 });
 
 const albumFormSchema = z.object({
@@ -42,6 +43,11 @@ type AlbumFormValues = z.infer<typeof albumFormSchema>;
 export default function AddLpPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const [availableArtistas, setAvailableArtistas] = useState<Artista[]>([]);
+
+  useEffect(() => {
+    setAvailableArtistas(getArtistas());
+  }, []);
 
   const form = useForm<AlbumFormValues>({
     resolver: zodResolver(albumFormSchema),
@@ -67,43 +73,41 @@ export default function AddLpPage() {
 
   const onSubmit = (data: AlbumFormValues) => {
     const isCompilation = data.artista.toLowerCase().includes('various');
-    let artistsArray: Artista[];
+    let albumArtistas: Artista[];
 
     if (isCompilation) {
-        const va = mockArtistas.find(a => a.nombre.toLowerCase() === 'various artists');
-        artistsArray = va ? [va] : [{id_artista: Date.now() + Math.random(), nombre: 'Various Artists'}];
+        albumArtistas = [addOrGetArtista('Various Artists')];
     } else {
-        let existingArtist = mockArtistas.find(a => a.nombre.toLowerCase() === data.artista.toLowerCase());
-        if (!existingArtist) {
-            existingArtist = { id_artista: Date.now() + Math.random(), nombre: data.artista };
-        }
-        artistsArray = [existingArtist];
+        albumArtistas = [addOrGetArtista(data.artista)];
     }
     
     const selectedSello = mockSellos.find(s => s.nombre === data.sello_nombre);
     
-    const currentAlbums = getAlbums();
-    const newAlbumId = currentAlbums.length > 0 ? Math.max(...currentAlbums.map(a => a.id_album)) + 1 : 1;
-
     const newAlbumData: Album = {
-      id_album: newAlbumId,
+      id_album: 0, // Will be set by addAlbum function
       titulo: data.titulo,
-      artistas: artistsArray,
+      artistas: albumArtistas,
       anio_lanzamiento: Number(data.anio_lanzamiento),
       genero_nombre: data.genero_nombre,
       genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || 0,
-      sello_id: selectedSello?.id_sello || 0, // Default to 0 if not found (should not happen with Select)
+      sello_id: selectedSello?.id_sello || 0,
       sello_nombre: selectedSello?.nombre || data.sello_nombre,
       url_caratula: data.url_caratula || 'https://placehold.co/300x300.png',
       es_compilacion: isCompilation,
-      canciones: data.canciones ? data.canciones.map((c, idx) => ({
-        id_cancion: Date.now() + idx + Math.random(), 
-        titulo: c.titulo,
-        bpm: c.bpm ? Number(c.bpm) : undefined,
-        artista_principal_nombre: isCompilation ? c.artista_principal_nombre : undefined,
-        artistas: artistsArray 
-      })) : [],
-      formato: 'LP', // Simulado
+      canciones: data.canciones ? data.canciones.map((c, idx) => {
+        let songArtistasArray: Artista[] = albumArtistas; // Default to album artist
+        if (isCompilation && c.artista_principal_nombre) {
+          songArtistasArray = [addOrGetArtista(c.artista_principal_nombre)];
+        }
+        return {
+          id_cancion: Date.now() + idx + Math.random(), 
+          titulo: c.titulo,
+          bpm: c.bpm ? Number(c.bpm) : undefined,
+          artista_principal_nombre: isCompilation ? c.artista_principal_nombre : undefined,
+          artistas: songArtistasArray 
+        };
+      }) : [],
+      formato: 'LP', 
     };
 
     addAlbum(newAlbumData);

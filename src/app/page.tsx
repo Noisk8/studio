@@ -3,35 +3,38 @@
 
 import { useState, useEffect } from 'react';
 import type { Album, Filters, SortKey, Artista, Genero } from '@/lib/types';
-import { getAlbums, mockArtistas, mockGeneros } from '@/lib/mock-data'; // Updated import
+import { getAlbums, getArtistas, mockGeneros } from '@/lib/mock-data'; // Updated import
 import AlbumCard from '@/components/AlbumCard';
 import FilterSortControls from '@/components/FilterSortControls';
 import { Input } from '@/components/ui/input';
-import { Search, RefreshCw } from 'lucide-react'; // Added RefreshCw for loading
+import { Search, RefreshCw } from 'lucide-react'; 
 
 export default function HomePage() {
   const [allAlbums, setAllAlbums] = useState<Album[]>([]);
+  const [allArtistas, setAllArtistas] = useState<Artista[]>([]); // State for artistas
   const [displayedAlbums, setDisplayedAlbums] = useState<Album[]>([]);
   const [filters, setFilters] = useState<Filters>({});
   const [sortKey, setSortKey] = useState<SortKey>('title_asc');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true); // Added loading state
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load initial albums and set up listener for updates
   useEffect(() => {
     const loadData = () => {
       setAllAlbums(getAlbums());
+      setAllArtistas(getArtistas()); // Load artistas
       setIsLoading(false);
     };
-    loadData(); // Initial load
+    loadData(); 
 
-    const handleAlbumsUpdate = () => {
-      loadData(); // Reload data on update
+    const handleDataUpdate = () => { // Combined handler for albums and artistas
+      loadData(); 
     };
 
-    window.addEventListener('albumsUpdated', handleAlbumsUpdate);
+    window.addEventListener('albumsUpdated', handleDataUpdate);
+    window.addEventListener('artistasUpdated', handleDataUpdate); // Listen for artist updates
     return () => {
-      window.removeEventListener('albumsUpdated', handleAlbumsUpdate);
+      window.removeEventListener('albumsUpdated', handleDataUpdate);
+      window.removeEventListener('artistasUpdated', handleDataUpdate);
     };
   }, []);
 
@@ -48,11 +51,10 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    if (isLoading) return; // Don't filter/sort until data is loaded
+    if (isLoading) return; 
 
     let filtered = [...allAlbums];
 
-    // Search term filtering (album title, artist name)
     if (searchTerm) {
       filtered = filtered.filter(album =>
         album.titulo.toLowerCase().includes(searchTerm) ||
@@ -61,19 +63,16 @@ export default function HomePage() {
       );
     }
     
-    // Genre filter
     if (filters.genre) {
       filtered = filtered.filter(album => album.genero_nombre === filters.genre);
     }
 
-    // Artist filter
     if (filters.artist) {
       filtered = filtered.filter(album => 
         album.es_compilacion ? filters.artist === "Various Artists" : album.artistas.some(a => a.nombre === filters.artist)
       );
     }
     
-    // BPM Range filter
     if (filters.bpmRange) {
       const [minBpmStr, maxBpmStr] = filters.bpmRange.split('-');
       const minBpm = parseInt(minBpmStr, 10);
@@ -86,7 +85,6 @@ export default function HomePage() {
       );
     }
 
-    // Sorting logic
     switch (sortKey) {
       case 'title_asc':
         filtered.sort((a, b) => a.titulo.localeCompare(b.titulo));
@@ -135,8 +133,8 @@ export default function HomePage() {
       </div>
 
       <FilterSortControls
-        allArtists={mockArtistas} // These remain static mocks
-        allGenres={mockGeneros}   // These remain static mocks
+        allArtists={allArtistas} // Pass dynamic artistas
+        allGenres={mockGeneros}   
         onFilterChange={handleFilterChange}
         onSortChange={handleSortChange}
         initialFilters={filters}
@@ -158,3 +156,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    

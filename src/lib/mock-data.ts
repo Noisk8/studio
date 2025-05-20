@@ -2,6 +2,7 @@
 import type { Album, Artista, Genero, Sello } from './types';
 
 const VINYLVISION_ALBUMS_KEY = 'vinylVisionAlbums';
+const VINYLVISION_ARTISTS_KEY = 'vinylVisionArtists'; // Key for artists
 
 // Original hardcoded data (will serve as default)
 const defaultMockAlbums: Album[] = [
@@ -126,15 +127,15 @@ const defaultMockAlbums: Album[] = [
     es_compilacion: true,
     artistas: [{ id_artista: 5, nombre: 'Various Artists' }],
     canciones: [
-      { id_cancion: 19, titulo: 'Future Beat', bpm: 130, artista_principal_nombre: 'DJ Electron' },
-      { id_cancion: 20, titulo: 'Acid Dreams', bpm: 135, artista_principal_nombre: 'Syntax Error' },
-      { id_cancion: 21, titulo: 'Rhythm Machine', bpm: 128, artista_principal_nombre: 'The Modulator' },
+      { id_cancion: 19, titulo: 'Future Beat', bpm: 130, artista_principal_nombre: 'DJ Electron', artistas: [{id_artista: 8, nombre: 'DJ Electron'}] },
+      { id_cancion: 20, titulo: 'Acid Dreams', bpm: 135, artista_principal_nombre: 'Syntax Error', artistas: [{id_artista: 9, nombre: 'Syntax Error'}] },
+      { id_cancion: 21, titulo: 'Rhythm Machine', bpm: 128, artista_principal_nombre: 'The Modulator', artistas: [{id_artista: 10, nombre: 'The Modulator'}] },
     ],
   },
 ];
 
-
-export const mockArtistas: Artista[] = [
+// Default artists, will be merged with localStorage
+const defaultMockArtistas: Artista[] = [
   { id_artista: 1, nombre: 'Kraftwerk', pais: 'Germany' },
   { id_artista: 2, nombre: 'Daft Punk', pais: 'France' },
   { id_artista: 3, nombre: 'The Beatles', pais: 'UK' },
@@ -142,9 +143,12 @@ export const mockArtistas: Artista[] = [
   { id_artista: 5, nombre: 'Various Artists' }, // For compilations
   { id_artista: 6, nombre: 'Miles Davis', pais: 'USA'},
   { id_artista: 7, nombre: 'Massive Attack', pais: 'UK'},
+  { id_artista: 8, nombre: 'DJ Electron' },
+  { id_artista: 9, nombre: 'Syntax Error' },
+  { id_artista: 10, nombre: 'The Modulator' },
 ];
 
-export const mockGeneros: Genero[] = [
+export const mockGeneros: Genero[] = [ // Stays as mock, not persisted for now
   { id_genero: 1, nombre: 'Electronic' },
   { id_genero: 2, nombre: 'Rock' },
   { id_genero: 3, nombre: 'Pop' },
@@ -153,7 +157,7 @@ export const mockGeneros: Genero[] = [
   { id_genero: 6, nombre: 'Techno' },
 ];
 
-export const mockSellos: Sello[] = [
+export const mockSellos: Sello[] = [ // Stays as mock, not persisted for now
   { id_sello: 1, nombre: 'EMI' },
   { id_sello: 2, nombre: 'Virgin Records' },
   { id_sello: 3, nombre: 'Parlophone' },
@@ -161,15 +165,14 @@ export const mockSellos: Sello[] = [
   { id_sello: 5, nombre: 'Warp Records' },
 ];
 
-// --- localStorage persistence logic ---
+// --- localStorage persistence logic for Albums ---
 let currentAlbums: Album[] = [];
-let hasLoadedFromStorage = false; // Renamed for clarity
+let albumsLoadedFromStorage = false;
 
 function _saveAlbumsToLocalStorage(albumsToSave: Album[]) {
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(VINYLVISION_ALBUMS_KEY, JSON.stringify(albumsToSave));
-      // Dispatch an event to notify other components of the update
       window.dispatchEvent(new CustomEvent('albumsUpdated'));
     } catch (error) {
       console.error("Error saving albums to localStorage:", error);
@@ -179,45 +182,122 @@ function _saveAlbumsToLocalStorage(albumsToSave: Album[]) {
 
 export function getAlbums(): Album[] {
   if (typeof window === 'undefined') {
-    // For SSR/prerendering, return a fresh copy of defaults.
-    // This won't be persisted but avoids errors during build.
     return JSON.parse(JSON.stringify(defaultMockAlbums));
   }
-
-  if (!hasLoadedFromStorage) {
+  if (!albumsLoadedFromStorage) {
     try {
       const storedAlbumsJson = localStorage.getItem(VINYLVISION_ALBUMS_KEY);
       if (storedAlbumsJson) {
         currentAlbums = JSON.parse(storedAlbumsJson);
       } else {
-        // Initialize with a deep copy of defaultMockAlbums
         currentAlbums = JSON.parse(JSON.stringify(defaultMockAlbums));
-        _saveAlbumsToLocalStorage(currentAlbums); // Save initial defaults
+        _saveAlbumsToLocalStorage(currentAlbums);
       }
     } catch (error) {
       console.error("Error loading albums from localStorage, using defaults:", error);
-      // Fallback to a deep copy of defaultMockAlbums in case of parsing error
       currentAlbums = JSON.parse(JSON.stringify(defaultMockAlbums));
     }
-    hasLoadedFromStorage = true;
+    albumsLoadedFromStorage = true;
   }
-  // Return a deep copy to prevent direct mutation of currentAlbums from outside
   return JSON.parse(JSON.stringify(currentAlbums));
 }
 
-export function addAlbum(newAlbum: Album): void {
-  const albums = getAlbums(); // Ensure current data is loaded
-  // Ensure newAlbum has a unique ID
+// --- localStorage persistence logic for Artists ---
+let currentArtistas: Artista[] = [];
+let artistasLoadedFromStorage = false;
+
+function _saveArtistasToLocalStorage(artistasToSave: Artista[]) {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(VINYLVISION_ARTISTS_KEY, JSON.stringify(artistasToSave));
+      window.dispatchEvent(new CustomEvent('artistasUpdated')); // Notify artist list changes
+    } catch (error) {
+      console.error("Error saving artistas to localStorage:", error);
+    }
+  }
+}
+
+export function getArtistas(): Artista[] {
+  if (typeof window === 'undefined') {
+    return JSON.parse(JSON.stringify(defaultMockArtistas));
+  }
+  if (!artistasLoadedFromStorage) {
+    try {
+      const storedArtistasJson = localStorage.getItem(VINYLVISION_ARTISTS_KEY);
+      if (storedArtistasJson) {
+        currentArtistas = JSON.parse(storedArtistasJson);
+        // Ensure default artists are present if storage was empty or missing some
+        defaultMockArtistas.forEach(defaultArtist => {
+          if (!currentArtistas.find(artist => artist.nombre.toLowerCase() === defaultArtist.nombre.toLowerCase())) {
+            currentArtistas.push(JSON.parse(JSON.stringify(defaultArtist)));
+          }
+        });
+      } else {
+        currentArtistas = JSON.parse(JSON.stringify(defaultMockArtistas));
+      }
+      _saveArtistasToLocalStorage(currentArtistas); // Save updated/initial list
+    } catch (error) {
+      console.error("Error loading artistas from localStorage, using defaults:", error);
+      currentArtistas = JSON.parse(JSON.stringify(defaultMockArtistas));
+    }
+    artistasLoadedFromStorage = true;
+  }
+  return JSON.parse(JSON.stringify(currentArtistas));
+}
+
+// Helper to add an artist if they don't exist
+export function addOrGetArtista(nombreArtista: string): Artista {
+  let artistas = getArtistas(); // Ensure current list is loaded
+  let existingArtist = artistas.find(a => a.nombre.toLowerCase() === nombreArtista.toLowerCase());
+
+  if (!existingArtist) {
+    const newArtistId = artistas.length > 0 ? Math.max(...artistas.map(a => a.id_artista)) + 1 : 1;
+    const newArtist: Artista = { id_artista: newArtistId, nombre: nombreArtista };
+    artistas.push(newArtist);
+    currentArtistas = artistas; // Update in-memory cache
+    _saveArtistasToLocalStorage(artistas);
+    return newArtist;
+  }
+  return existingArtist;
+}
+
+
+export function addAlbum(newAlbumData: Album): void {
+  const albums = getAlbums();
   const maxId = albums.length > 0 ? Math.max(...albums.map(a => a.id_album)) : 0;
-  newAlbum.id_album = maxId + 1;
+  newAlbumData.id_album = maxId + 1;
+
+  // Ensure artists exist or are created
+  newAlbumData.artistas = newAlbumData.artistas.map(formArtist => addOrGetArtista(formArtist.nombre));
+  if (newAlbumData.es_compilacion && newAlbumData.canciones) {
+    newAlbumData.canciones.forEach(cancion => {
+      if (cancion.artista_principal_nombre) {
+        const songArtist = addOrGetArtista(cancion.artista_principal_nombre);
+        // Optionally link song.artistas if your data model uses it beyond just the name
+         cancion.artistas = [songArtist];
+      }
+    });
+  }
   
-  const updatedAlbums = [...albums, newAlbum];
-  currentAlbums = updatedAlbums; // Update the in-memory cache
+  const updatedAlbums = [...albums, newAlbumData];
+  currentAlbums = updatedAlbums;
   _saveAlbumsToLocalStorage(updatedAlbums);
 }
 
 export function updateAlbum(albumId: number, updatedAlbumData: Album): void {
-  const albums = getAlbums();
+  let albums = getAlbums();
+
+  // Ensure artists exist or are created
+  updatedAlbumData.artistas = updatedAlbumData.artistas.map(formArtist => addOrGetArtista(formArtist.nombre));
+   if (updatedAlbumData.es_compilacion && updatedAlbumData.canciones) {
+    updatedAlbumData.canciones.forEach(cancion => {
+      if (cancion.artista_principal_nombre) {
+        const songArtist = addOrGetArtista(cancion.artista_principal_nombre);
+        cancion.artistas = [songArtist];
+      }
+    });
+  }
+
   const updatedAlbums = albums.map(album =>
     album.id_album === albumId ? { ...album, ...updatedAlbumData, id_album: albumId } : album
   );
@@ -230,3 +310,5 @@ export function findAlbumById(albumId: string | number): Album | undefined {
     return albums.find(album => album.id_album.toString() === albumId.toString());
 }
 // --- End localStorage persistence logic ---
+
+    

@@ -2,16 +2,17 @@
 'use client';
 
 import type { ChangeEvent } from 'react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react'; // Added useEffect
 import type { Artista, Genero, Filters, SortKey } from '@/lib/types';
 import { BPM_CATEGORIES } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Filter, RotateCcw, ListFilter, Users, Music2 } from 'lucide-react';
+import { getArtistas } from '@/lib/mock-data'; // Import getArtistas
 
 interface FilterSortControlsProps {
-  allArtists: Artista[];
+  allArtists: Artista[]; // Prop is now for initial load, internal state will manage updates
   allGenres: Genero[];
   onFilterChange: (filters: Filters) => void;
   onSortChange: (sortKey: SortKey) => void;
@@ -28,12 +29,10 @@ const sortOptions: { label: string; value: SortKey }[] = [
   { label: 'Title (Z-A)', value: 'title_desc' },
   { label: 'Year (Newest First)', value: 'year_new' },
   { label: 'Year (Oldest First)', value: 'year_old' },
-  // { label: 'Avg. BPM (Low-High)', value: 'bpm_avg_asc' }, // Avg BPM requires calculation
-  // { label: 'Avg. BPM (High-Low)', value: 'bpm_avg_desc' },
 ];
 
 export default function FilterSortControls({
-  allArtists,
+  allArtists: initialAllArtists, // Renamed prop
   allGenres,
   onFilterChange,
   onSortChange,
@@ -44,12 +43,31 @@ export default function FilterSortControls({
   const [artist, setArtist] = useState(initialFilters.artist || '');
   const [bpmRange, setBpmRange] = useState(initialFilters.bpmRange || '');
   const [sortKey, setSortKey] = useState<SortKey>(initialSortKey);
+  const [currentArtistas, setCurrentArtistas] = useState<Artista[]>(initialAllArtists); // State for artistas
+
+  // Effect to update artistas list when 'artistasUpdated' event is dispatched
+  useEffect(() => {
+    const updateArtistasList = () => {
+      setCurrentArtistas(getArtistas());
+    };
+    updateArtistasList(); // Initial fetch
+    window.addEventListener('artistasUpdated', updateArtistasList);
+    return () => {
+      window.removeEventListener('artistasUpdated', updateArtistasList);
+    };
+  }, []);
+
 
   const uniqueArtists = useMemo(() => {
     const artistNames = new Set<string>();
-    allArtists.forEach(a => artistNames.add(a.nombre));
+    // Use currentArtistas from state for the dropdown
+    currentArtistas.forEach(a => artistNames.add(a.nombre));
+    // Ensure "Various Artists" is always an option if present in the list
+    if (!artistNames.has("Various Artists") && currentArtistas.some(a => a.nombre.toLowerCase() === "various artists")) {
+        artistNames.add("Various Artists");
+    }
     return Array.from(artistNames).sort();
-  }, [allArtists]);
+  }, [currentArtistas]);
 
   const uniqueGenres = useMemo(() => {
     const genreNames = new Set<string>();
@@ -165,3 +183,5 @@ export default function FilterSortControls({
     </div>
   );
 }
+
+    
