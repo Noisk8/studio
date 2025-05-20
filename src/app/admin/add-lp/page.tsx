@@ -26,7 +26,7 @@ const albumFormSchema = z.object({
   titulo: z.string().min(1, "El título del álbum es requerido."),
   artista: z.string().min(1, "El artista es requerido."),
   anio_lanzamiento: z.coerce
-    .number({ invalid_type_error: "El año debe ser un número." })
+    .number({ invalid_type_error: "El año debe ser un número.", required_error: "El año de lanzamiento es requerido." })
     .min(1900, "Año de lanzamiento inválido.")
     .max(new Date().getFullYear() + 5, "Año de lanzamiento inválido."),
   genero_nombre: z.string().min(1, "El género es requerido."),
@@ -46,7 +46,7 @@ export default function AddLpPage() {
     defaultValues: {
       titulo: '',
       artista: '',
-      anio_lanzamiento: undefined, // Or new Date().getFullYear()
+      anio_lanzamiento: '' as unknown as number, // Initialize as empty string for controlled input
       genero_nombre: '',
       url_caratula: '',
       descripcion: '',
@@ -123,7 +123,7 @@ export default function AddLpPage() {
                   <FormItem>
                     <FormLabel>Año de Lanzamiento</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="Ej: 1967" {...field} />
+                      <Input type="number" placeholder="Ej: 1967" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : Number(e.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -202,7 +202,7 @@ export default function AddLpPage() {
                         <FormItem>
                           <FormLabel>BPM Canción {index + 1} (Opcional)</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="Ej: 120" {...songField} />
+                            <Input type="number" placeholder="Ej: 120" {...songField} onChange={e => songField.onChange(e.target.value === '' ? '' : Number(e.target.value))} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
