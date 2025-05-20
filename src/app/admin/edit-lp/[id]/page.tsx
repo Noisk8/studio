@@ -49,6 +49,7 @@ export default function EditLpPage() {
 
   const [isLoadingAlbum, setIsLoadingAlbum] = useState(true);
   const [albumToEdit, setAlbumToEdit] = useState<Album | undefined>(undefined);
+  // Artistas disponibles no se usa en edit, se crea dinámicamente. Pero lo dejamos por si se añade un select en el futuro.
   const [availableArtistas, setAvailableArtistas] = useState<Artista[]>([]);
 
 
@@ -87,7 +88,7 @@ export default function EditLpPage() {
           titulo: foundAlbum.titulo,
           artista: foundAlbum.es_compilacion ? "Various Artists" : foundAlbum.artistas.map(a => a.nombre).join(', '),
           anio_lanzamiento: foundAlbum.anio_lanzamiento ?? ('' as unknown as number),
-          genero_nombre: foundAlbum.genero_nombre,
+          genero_nombre: foundAlbum.genero_nombre || '',
           sello_nombre: foundAlbum.sello_nombre || '',
           url_caratula: foundAlbum.url_caratula || '',
           canciones: foundAlbum.canciones.map(c => ({ 
@@ -127,8 +128,8 @@ export default function EditLpPage() {
       titulo: data.titulo,
       artistas: albumArtistas,
       anio_lanzamiento: Number(data.anio_lanzamiento),
+      genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || albumToEdit.genero_id || 0,
       genero_nombre: data.genero_nombre,
-      genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || albumToEdit.genero_id,
       sello_id: selectedSello?.id_sello || albumToEdit.sello_id || 0,
       sello_nombre: selectedSello?.nombre || data.sello_nombre,
       url_caratula: data.url_caratula || 'https://placehold.co/300x300.png',
@@ -235,7 +236,7 @@ export default function EditLpPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Género</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecciona un género" />
@@ -257,7 +258,7 @@ export default function EditLpPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Sello Discográfico</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecciona un sello" />
@@ -338,7 +339,7 @@ export default function EditLpPage() {
                           <FormItem>
                             <FormLabel>Artista Canción {index + 1}</FormLabel>
                             <FormControl>
-                              <Input placeholder="Artista específico de esta canción" {...songField} defaultValue={songField.value || ''} />
+                              <Input placeholder="Artista específico de esta canción" {...songField} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -372,5 +373,3 @@ export default function EditLpPage() {
     </div>
   );
 }
-
-    
