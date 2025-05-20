@@ -41,7 +41,7 @@ export default function AlbumCard({ album }: AlbumCardProps) {
               </Badge>
             )}
             {album.sello_nombre && (
-               <Badge variant="outline" className="flex items-center">
+               <Badge variant="outline" className="flex items-center text-xs">
                 <Disc className="w-3 h-3 mr-1" /> {album.sello_nombre}
               </Badge>
             )}
@@ -88,3 +88,5 @@ export default function AlbumCard({ album }: AlbumCardProps) {
     </Link>
   );
 }
+
+    

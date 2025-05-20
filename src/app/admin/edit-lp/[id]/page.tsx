@@ -16,7 +16,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Save, PlusCircle, Trash2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { findAlbumById, updateAlbum, mockGeneros, mockArtistas } from '@/lib/mock-data';
+import { findAlbumById, updateAlbum, mockGeneros, mockArtistas, mockSellos } from '@/lib/mock-data';
 import type { Album, Artista } from '@/lib/types';
 
 const songSchema = z.object({
@@ -34,6 +34,7 @@ const albumFormSchema = z.object({
     .min(1900, "Año de lanzamiento inválido.")
     .max(new Date().getFullYear() + 15, "Año de lanzamiento inválido."),
   genero_nombre: z.string().min(1, "El género es requerido."),
+  sello_nombre: z.string().min(1, "El sello discográfico es requerido."),
   url_caratula: z.string().url("URL de carátula inválida. Usar https://placehold.co/300x300.png si no hay URL.").or(z.literal('')).optional(),
   canciones: z.array(songSchema).optional(),
 });
@@ -56,6 +57,7 @@ export default function EditLpPage() {
       artista: '',
       anio_lanzamiento: '' as unknown as number,
       genero_nombre: '',
+      sello_nombre: '',
       url_caratula: '',
       canciones: [],
     },
@@ -80,6 +82,7 @@ export default function EditLpPage() {
           artista: foundAlbum.es_compilacion ? "Various Artists" : foundAlbum.artistas.map(a => a.nombre).join(', '),
           anio_lanzamiento: foundAlbum.anio_lanzamiento ?? ('' as unknown as number),
           genero_nombre: foundAlbum.genero_nombre,
+          sello_nombre: foundAlbum.sello_nombre || '',
           url_caratula: foundAlbum.url_caratula || '',
           canciones: foundAlbum.canciones.map(c => ({ 
             id_cancion: c.id_cancion,
@@ -111,11 +114,12 @@ export default function EditLpPage() {
     } else {
         let existingArtist = mockArtistas.find(a => a.nombre.toLowerCase() === data.artista.toLowerCase());
         if (!existingArtist) {
-            // For mock, use existing ID if possible or generate new.
             existingArtist = { id_artista: albumToEdit.artistas[0]?.id_artista || Date.now() + Math.random(), nombre: data.artista };
         }
         artistsArray = [existingArtist];
     }
+
+    const selectedSello = mockSellos.find(s => s.nombre === data.sello_nombre);
 
     const updatedAlbumData: Album = {
       ...albumToEdit,
@@ -124,6 +128,8 @@ export default function EditLpPage() {
       anio_lanzamiento: Number(data.anio_lanzamiento),
       genero_nombre: data.genero_nombre,
       genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || albumToEdit.genero_id,
+      sello_id: selectedSello?.id_sello || albumToEdit.sello_id || 0,
+      sello_nombre: selectedSello?.nombre || data.sello_nombre,
       url_caratula: data.url_caratula || 'https://placehold.co/300x300.png',
       es_compilacion: isCompilation,
       canciones: data.canciones ? data.canciones.map((c, idx) => {
@@ -242,6 +248,28 @@ export default function EditLpPage() {
               />
                <FormField
                 control={form.control}
+                name="sello_nombre"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sello Discográfico</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un sello" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {mockSellos.map(s => (
+                          <SelectItem key={s.id_sello} value={s.nombre}>{s.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
                 name="url_caratula"
                 render={({ field }) => (
                   <FormItem>
@@ -339,3 +367,5 @@ export default function EditLpPage() {
     </div>
   );
 }
+
+    

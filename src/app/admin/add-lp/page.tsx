@@ -15,7 +15,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { addAlbum, mockGeneros, mockArtistas, getAlbums } from '@/lib/mock-data';
+import { addAlbum, mockGeneros, mockArtistas, mockSellos, getAlbums } from '@/lib/mock-data';
 import type { Album, Artista } from '@/lib/types';
 
 const songSchema = z.object({
@@ -32,6 +32,7 @@ const albumFormSchema = z.object({
     .min(1900, "Año de lanzamiento inválido.")
     .max(new Date().getFullYear() + 15, "Año de lanzamiento inválido."),
   genero_nombre: z.string().min(1, "El género es requerido."),
+  sello_nombre: z.string().min(1, "El sello discográfico es requerido."),
   url_caratula: z.string().url("URL de carátula inválida. Usar https://placehold.co/300x300.png si no hay URL.").or(z.literal('')).optional(),
   canciones: z.array(songSchema).optional(),
 });
@@ -49,6 +50,7 @@ export default function AddLpPage() {
       artista: '',
       anio_lanzamiento: '' as unknown as number,
       genero_nombre: '',
+      sello_nombre: '',
       url_caratula: '',
       canciones: [{ titulo: '', bpm: '', artista_principal_nombre: '' }],
     },
@@ -73,12 +75,12 @@ export default function AddLpPage() {
     } else {
         let existingArtist = mockArtistas.find(a => a.nombre.toLowerCase() === data.artista.toLowerCase());
         if (!existingArtist) {
-            // For mock purposes, create a new artist object if not found.
-            // In a real app, this might involve adding to a database or selecting from an existing list.
             existingArtist = { id_artista: Date.now() + Math.random(), nombre: data.artista };
         }
         artistsArray = [existingArtist];
     }
+    
+    const selectedSello = mockSellos.find(s => s.nombre === data.sello_nombre);
     
     const currentAlbums = getAlbums();
     const newAlbumId = currentAlbums.length > 0 ? Math.max(...currentAlbums.map(a => a.id_album)) + 1 : 1;
@@ -90,6 +92,8 @@ export default function AddLpPage() {
       anio_lanzamiento: Number(data.anio_lanzamiento),
       genero_nombre: data.genero_nombre,
       genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || 0,
+      sello_id: selectedSello?.id_sello || 0, // Default to 0 if not found (should not happen with Select)
+      sello_nombre: selectedSello?.nombre || data.sello_nombre,
       url_caratula: data.url_caratula || 'https://placehold.co/300x300.png',
       es_compilacion: isCompilation,
       canciones: data.canciones ? data.canciones.map((c, idx) => ({
@@ -97,10 +101,8 @@ export default function AddLpPage() {
         titulo: c.titulo,
         bpm: c.bpm ? Number(c.bpm) : undefined,
         artista_principal_nombre: isCompilation ? c.artista_principal_nombre : undefined,
-        artistas: artistsArray // Song artists inherit from album artists for simplicity here
+        artistas: artistsArray 
       })) : [],
-      sello_id: 1, // Simulado
-      sello_nombre: 'MockSello', // Simulado
       formato: 'LP', // Simulado
     };
 
@@ -187,6 +189,28 @@ export default function AddLpPage() {
                       <SelectContent>
                         {mockGeneros.map(g => (
                           <SelectItem key={g.id_genero} value={g.nombre}>{g.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="sello_nombre"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sello Discográfico</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un sello" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {mockSellos.map(s => (
+                          <SelectItem key={s.id_sello} value={s.nombre}>{s.nombre}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -293,3 +317,5 @@ export default function AddLpPage() {
     </div>
   );
 }
+
+    

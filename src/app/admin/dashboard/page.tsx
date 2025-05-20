@@ -1,15 +1,15 @@
 
 'use client';
 
-import { useState, useEffect } from 'react'; // Added useState, useEffect
+import { useState, useEffect } from 'react'; 
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getAlbums } from '@/lib/mock-data'; // Using getAlbums for persisted data
+import { getAlbums } from '@/lib/mock-data'; 
 import type { Album } from '@/lib/types';
-import { PlusCircle, Edit, ListMusic, RefreshCw } from 'lucide-react';
+import { PlusCircle, Edit, ListMusic, RefreshCw, Disc } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -74,6 +74,7 @@ export default function AdminDashboardPage() {
                     <TableHead>Artista(s)</TableHead>
                     <TableHead>Año</TableHead>
                     <TableHead>Género</TableHead>
+                    <TableHead>Sello</TableHead>
                     <TableHead className="text-right w-[150px]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -99,6 +100,12 @@ export default function AdminDashboardPage() {
                       </TableCell>
                       <TableCell>{album.anio_lanzamiento || 'N/A'}</TableCell>
                       <TableCell>{album.genero_nombre || 'N/A'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                           {album.sello_nombre ? <Disc className="w-3 h-3 mr-1.5 text-muted-foreground hidden sm:inline-block" /> : null}
+                           {album.sello_nombre || 'N/A'}
+                        </div>
+                        </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/admin/edit-lp/${album.id_album}`}>
@@ -120,3 +127,5 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+    
