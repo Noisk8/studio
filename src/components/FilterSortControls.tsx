@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ChangeEvent } from 'react';
@@ -18,13 +19,9 @@ interface FilterSortControlsProps {
   initialSortKey?: SortKey;
 }
 
-const bpmRanges = [
-  { label: 'All BPMs', value: '' },
-  ...BPM_CATEGORIES.map(cat => ({
-    label: `${cat.rango_minimo}-${cat.rango_maximo} BPM (${cat.emoji})`,
-    value: `${cat.rango_minimo}-${cat.rango_maximo}`
-  }))
-];
+const ALL_GENRES_VALUE = '__ALL_GENRES__';
+const ALL_ARTISTS_VALUE = '__ALL_ARTISTS__';
+const ALL_BPMS_VALUE = '__ALL_BPMS__';
 
 const sortOptions: { label: string; value: SortKey }[] = [
   { label: 'Title (A-Z)', value: 'title_asc' },
@@ -59,6 +56,15 @@ export default function FilterSortControls({
     allGenres.forEach(g => genreNames.add(g.nombre));
     return Array.from(genreNames).sort();
   }, [allGenres]);
+  
+  const bpmRanges = useMemo(() => [
+    { label: 'All BPMs', value: ALL_BPMS_VALUE },
+    ...BPM_CATEGORIES.map(cat => ({
+      label: `${cat.rango_minimo}-${cat.rango_maximo} BPM (${cat.emoji})`,
+      value: `${cat.rango_minimo}-${cat.rango_maximo}`
+    }))
+  ], []);
+
 
   const handleApplyFilters = () => {
     onFilterChange({ genre, artist, bpmRange });
@@ -84,12 +90,15 @@ export default function FilterSortControls({
           <Label htmlFor="genre-filter" className="flex items-center mb-1 text-sm font-medium">
             <Music2 className="w-4 h-4 mr-2" /> Genre
           </Label>
-          <Select value={genre} onValueChange={setGenre}>
+          <Select 
+            value={genre === '' ? ALL_GENRES_VALUE : genre} 
+            onValueChange={(val) => setGenre(val === ALL_GENRES_VALUE ? '' : val)}
+          >
             <SelectTrigger id="genre-filter">
               <SelectValue placeholder="All Genres" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Genres</SelectItem>
+              <SelectItem value={ALL_GENRES_VALUE}>All Genres</SelectItem>
               {uniqueGenres.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -99,12 +108,15 @@ export default function FilterSortControls({
           <Label htmlFor="artist-filter" className="flex items-center mb-1 text-sm font-medium">
             <Users className="w-4 h-4 mr-2" /> Artist
           </Label>
-          <Select value={artist} onValueChange={setArtist}>
+          <Select 
+            value={artist === '' ? ALL_ARTISTS_VALUE : artist} 
+            onValueChange={(val) => setArtist(val === ALL_ARTISTS_VALUE ? '' : val)}
+          >
             <SelectTrigger id="artist-filter">
               <SelectValue placeholder="All Artists" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Artists</SelectItem>
+              <SelectItem value={ALL_ARTISTS_VALUE}>All Artists</SelectItem>
               {uniqueArtists.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -115,7 +127,10 @@ export default function FilterSortControls({
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M2 12h3l3-9 4 18 3-9h3"/><path d="M12 2v20"/></svg>
             BPM Range
           </Label>
-          <Select value={bpmRange} onValueChange={setBpmRange}>
+          <Select 
+            value={bpmRange === '' ? ALL_BPMS_VALUE : bpmRange} 
+            onValueChange={(val) => setBpmRange(val === ALL_BPMS_VALUE ? '' : val)}
+          >
             <SelectTrigger id="bpm-filter">
               <SelectValue placeholder="All BPMs" />
             </SelectTrigger>
