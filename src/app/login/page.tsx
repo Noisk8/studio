@@ -21,8 +21,21 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
-    // Mock authentication
-    if (email === 'admin@example.com' && password === 'password') {
+    // Leer credenciales desde variables de entorno
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+
+    if (!adminEmail || !adminPassword) {
+      setError('Error de configuración: Credenciales de administrador no definidas.');
+      toast({
+        title: 'Error de Configuración',
+        description: 'Las credenciales de administrador no están configuradas correctamente en el entorno.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (email === adminEmail && password === adminPassword) {
       localStorage.setItem('vinylAdminLoggedIn', 'true');
       toast({
         title: 'Inicio de Sesión Exitoso',
