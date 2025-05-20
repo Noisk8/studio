@@ -15,21 +15,22 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { addAlbum, mockGeneros, mockArtistas, getAlbums } from '@/lib/mock-data'; // Updated imports
+import { addAlbum, mockGeneros, mockArtistas, getAlbums } from '@/lib/mock-data';
 import type { Album, Artista } from '@/lib/types';
 
 const songSchema = z.object({
   titulo: z.string().min(1, "El título de la canción es requerido."),
   bpm: z.coerce.number().positive("BPM debe ser un número positivo.").optional().or(z.literal('')),
+  artista_principal_nombre: z.string().optional(), // Para compilaciones
 });
 
 const albumFormSchema = z.object({
   titulo: z.string().min(1, "El título del álbum es requerido."),
-  artista: z.string().min(1, "El artista es requerido."),
+  artista: z.string().min(1, "El artista es requerido. Ingresa 'Various Artists' para compilaciones."),
   anio_lanzamiento: z.coerce
     .number({ invalid_type_error: "El año debe ser un número.", required_error: "El año de lanzamiento es requerido." })
     .min(1900, "Año de lanzamiento inválido.")
-    .max(new Date().getFullYear() + 15, "Año de lanzamiento inválido."), // Increased max year
+    .max(new Date().getFullYear() + 15, "Año de lanzamiento inválido."),
   genero_nombre: z.string().min(1, "El género es requerido."),
   url_caratula: z.string().url("URL de carátula inválida. Usar https://placehold.co/300x300.png si no hay URL.").or(z.literal('')).optional(),
   canciones: z.array(songSchema).optional(),
@@ -46,10 +47,10 @@ export default function AddLpPage() {
     defaultValues: {
       titulo: '',
       artista: '',
-      anio_lanzamiento: '' as unknown as number, // Keep as is for react-hook-form with zod coercion
+      anio_lanzamiento: '' as unknown as number,
       genero_nombre: '',
       url_caratula: '',
-      canciones: [{ titulo: '', bpm: '' }],
+      canciones: [{ titulo: '', bpm: '', artista_principal_nombre: '' }],
     },
   });
 
@@ -59,6 +60,8 @@ export default function AddLpPage() {
   });
 
   const watchedCaratula = form.watch('url_caratula');
+  const watchedArtista = form.watch('artista');
+  const isAlbumCompilation = watchedArtista?.toLowerCase().includes('various');
 
   const onSubmit = (data: AlbumFormValues) => {
     const isCompilation = data.artista.toLowerCase().includes('various');
@@ -66,19 +69,18 @@ export default function AddLpPage() {
 
     if (isCompilation) {
         const va = mockArtistas.find(a => a.nombre.toLowerCase() === 'various artists');
-        artistsArray = va ? [va] : [{id_artista: Date.now() + Math.random(), nombre: 'Various Artists'}]
+        artistsArray = va ? [va] : [{id_artista: Date.now() + Math.random(), nombre: 'Various Artists'}];
     } else {
-        // Check if artist exists, if not create a new one (mock behavior)
         let existingArtist = mockArtistas.find(a => a.nombre.toLowerCase() === data.artista.toLowerCase());
         if (!existingArtist) {
+            // For mock purposes, create a new artist object if not found.
+            // In a real app, this might involve adding to a database or selecting from an existing list.
             existingArtist = { id_artista: Date.now() + Math.random(), nombre: data.artista };
-            // In a real app, you might want to add this new artist to a persisted list of artists
-            // mockArtistas.push(existingArtist); // For now, just use it for this album
         }
         artistsArray = [existingArtist];
     }
     
-    const currentAlbums = getAlbums(); // Get current albums to determine next ID
+    const currentAlbums = getAlbums();
     const newAlbumId = currentAlbums.length > 0 ? Math.max(...currentAlbums.map(a => a.id_album)) + 1 : 1;
 
     const newAlbumData: Album = {
@@ -89,19 +91,20 @@ export default function AddLpPage() {
       genero_nombre: data.genero_nombre,
       genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || 0,
       url_caratula: data.url_caratula || 'https://placehold.co/300x300.png',
+      es_compilacion: isCompilation,
       canciones: data.canciones ? data.canciones.map((c, idx) => ({
         id_cancion: Date.now() + idx + Math.random(), 
         titulo: c.titulo,
         bpm: c.bpm ? Number(c.bpm) : undefined,
-        artistas: artistsArray // Assign main album artists to songs for simplicity in mock
+        artista_principal_nombre: isCompilation ? c.artista_principal_nombre : undefined,
+        artistas: artistsArray // Song artists inherit from album artists for simplicity here
       })) : [],
       sello_id: 1, // Simulado
       sello_nombre: 'MockSello', // Simulado
       formato: 'LP', // Simulado
-      es_compilacion: isCompilation,
     };
 
-    addAlbum(newAlbumData); // Use persisted addAlbum function
+    addAlbum(newAlbumData);
     
     toast({
       title: 'Álbum Agregado',
@@ -148,7 +151,7 @@ export default function AddLpPage() {
                 name="artista"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Artista(s)</FormLabel>
+                    <FormLabel>Artista(s) del Álbum</FormLabel>
                     <FormControl>
                       <Input placeholder="Ej: The Beatles o Various Artists" {...field} />
                     </FormControl>
@@ -200,7 +203,7 @@ export default function AddLpPage() {
                     <FormControl>
                       <Input type="url" placeholder="https://placehold.co/300x300.png" {...field} />
                     </FormControl>
-                     {watchedCaratula && ( // Show preview if URL is entered
+                     {watchedCaratula && (
                         <div className="mt-2">
                            <Image
                             src={watchedCaratula || 'https://placehold.co/100x100.png'}
@@ -248,6 +251,21 @@ export default function AddLpPage() {
                         </FormItem>
                       )}
                     />
+                    {isAlbumCompilation && (
+                       <FormField
+                        control={form.control}
+                        name={`canciones.${index}.artista_principal_nombre`}
+                        render={({ field: songField }) => (
+                          <FormItem>
+                            <FormLabel>Artista Canción {index + 1}</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Artista específico de esta canción" {...songField} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                     <Button type="button" variant="destructive" size="sm" onClick={() => remove(index)}>
                       <Trash2 className="mr-2 h-4 w-4" /> Eliminar Canción
                     </Button>
@@ -256,7 +274,7 @@ export default function AddLpPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => append({ titulo: '', bpm: '' })}
+                  onClick={() => append({ titulo: '', bpm: '', artista_principal_nombre: '' })}
                 >
                   <PlusCircle className="mr-2 h-4 w-4" /> Agregar Otra Canción
                 </Button>

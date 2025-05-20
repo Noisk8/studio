@@ -1,17 +1,17 @@
 
 'use client';
 
-import { useState, useEffect } from 'react'; // Added useState, useEffect
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { findAlbumById } from '@/lib/mock-data'; // Using findAlbumById
+import { findAlbumById } from '@/lib/mock-data';
 import type { Album } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import BpmIndicator from '@/components/BpmIndicator';
-import { ArrowLeft, Users, Tag, Disc, CalendarDays, ListMusic, Info, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Users, Tag, Disc, CalendarDays, ListMusic, Info, RefreshCw, UserSquare } from 'lucide-react';
 
 export default function AlbumDetailPage() {
   const params = useParams();
@@ -27,7 +27,6 @@ export default function AlbumDetailPage() {
       setAlbum(foundAlbum);
       setIsLoading(false);
     }
-    // Listener for potential updates if this page stays open
     const handleAlbumsUpdate = () => {
       if (albumId) {
         const updatedFoundAlbum = findAlbumById(albumId);
@@ -62,7 +61,7 @@ export default function AlbumDetailPage() {
     );
   }
 
-  const artistsDisplay = album.es_compilacion ? "Various Artists" : album.artistas.map(a => a.nombre).join(', ');
+  const artistsDisplay = album.es_compilacion ? "Varios Artistas" : album.artistas.map(a => a.nombre).join(', ');
 
   return (
     <div className="space-y-8">
@@ -127,14 +126,18 @@ export default function AlbumDetailPage() {
                   </h3>
                   <ul className="space-y-2 border rounded-md p-4 max-h-96 overflow-y-auto">
                     {album.canciones.map((cancion, index) => (
-                      <li key={cancion.id_cancion || index} className="flex justify-between items-center p-2 rounded hover:bg-muted/50">
-                        <span className="truncate">
-                          {cancion.numero_pista ? `${cancion.numero_pista}. ` : `${index + 1}. `}
-                          {cancion.titulo}
-                          {cancion.artista_principal_nombre && album.es_compilacion && (
-                            <span className="text-xs text-muted-foreground ml-1">({cancion.artista_principal_nombre})</span>
+                      <li key={cancion.id_cancion || index} className="flex justify-between items-start p-2 rounded hover:bg-muted/50">
+                        <div>
+                          <span className="font-medium">
+                            {cancion.numero_pista ? `${cancion.numero_pista}. ` : `${index + 1}. `}
+                            {cancion.titulo}
+                          </span>
+                          {album.es_compilacion && cancion.artista_principal_nombre && (
+                            <div className="text-xs text-muted-foreground ml-5 flex items-center">
+                               <UserSquare className="w-3 h-3 mr-1"/> {cancion.artista_principal_nombre}
+                            </div>
                           )}
-                        </span>
+                        </div>
                         <BpmIndicator bpm={cancion.bpm} />
                       </li>
                     ))}

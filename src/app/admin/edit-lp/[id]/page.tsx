@@ -16,18 +16,19 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Save, PlusCircle, Trash2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { findAlbumById, updateAlbum, mockGeneros, mockArtistas } from '@/lib/mock-data'; // Updated imports
+import { findAlbumById, updateAlbum, mockGeneros, mockArtistas } from '@/lib/mock-data';
 import type { Album, Artista } from '@/lib/types';
 
 const songSchema = z.object({
-  id_cancion: z.number().optional(), // Keep track of existing song IDs
+  id_cancion: z.number().optional(),
   titulo: z.string().min(1, "El título de la canción es requerido."),
   bpm: z.coerce.number().positive("BPM debe ser un número positivo.").optional().or(z.literal('')),
+  artista_principal_nombre: z.string().optional(), // Para compilaciones
 });
 
 const albumFormSchema = z.object({
   titulo: z.string().min(1, "El título del álbum es requerido."),
-  artista: z.string().min(1, "El artista es requerido."),
+  artista: z.string().min(1, "El artista es requerido. Ingresa 'Various Artists' para compilaciones."),
   anio_lanzamiento: z.coerce
     .number({ invalid_type_error: "El año debe ser un número.", required_error: "El año de lanzamiento es requerido." })
     .min(1900, "Año de lanzamiento inválido.")
@@ -66,6 +67,8 @@ export default function EditLpPage() {
   });
 
   const watchedCaratula = form.watch('url_caratula');
+  const watchedArtista = form.watch('artista');
+  const isAlbumCompilation = watchedArtista?.toLowerCase().includes('various');
 
   useEffect(() => {
     if (albumId) {
@@ -81,7 +84,8 @@ export default function EditLpPage() {
           canciones: foundAlbum.canciones.map(c => ({ 
             id_cancion: c.id_cancion,
             titulo: c.titulo, 
-            bpm: c.bpm ?? ''
+            bpm: c.bpm ?? '',
+            artista_principal_nombre: c.artista_principal_nombre || ''
           })) || [],
         });
       } else {
@@ -107,14 +111,14 @@ export default function EditLpPage() {
     } else {
         let existingArtist = mockArtistas.find(a => a.nombre.toLowerCase() === data.artista.toLowerCase());
         if (!existingArtist) {
+            // For mock, use existing ID if possible or generate new.
             existingArtist = { id_artista: albumToEdit.artistas[0]?.id_artista || Date.now() + Math.random(), nombre: data.artista };
-            // In a real app, new artists might be handled differently
         }
         artistsArray = [existingArtist];
     }
 
     const updatedAlbumData: Album = {
-      ...albumToEdit, // Preserve existing fields like id_album, sello_id, etc.
+      ...albumToEdit,
       titulo: data.titulo,
       artistas: artistsArray,
       anio_lanzamiento: Number(data.anio_lanzamiento),
@@ -124,9 +128,10 @@ export default function EditLpPage() {
       es_compilacion: isCompilation,
       canciones: data.canciones ? data.canciones.map((c, idx) => {
         return {
-          id_cancion: c.id_cancion || Date.now() + idx + Math.random(), // Use existing ID or generate new
+          id_cancion: c.id_cancion || Date.now() + idx + Math.random(),
           titulo: c.titulo,
           bpm: c.bpm ? Number(c.bpm) : undefined,
+          artista_principal_nombre: isCompilation ? c.artista_principal_nombre : undefined,
           artistas: artistsArray 
         };
       }) : [],
@@ -151,7 +156,6 @@ export default function EditLpPage() {
   }
   
   if (!albumToEdit) {
-    // This case should be handled by useEffect redirecting, but as a fallback.
     return <div className="flex items-center justify-center h-screen">Álbum no encontrado. Redirigiendo...</div>;
   }
   
@@ -193,7 +197,7 @@ export default function EditLpPage() {
                 name="artista"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Artista(s)</FormLabel>
+                    <FormLabel>Artista(s) del Álbum</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="Ej: The Beatles o Various Artists"/>
                     </FormControl>
@@ -293,6 +297,21 @@ export default function EditLpPage() {
                         </FormItem>
                       )}
                     />
+                    {isAlbumCompilation && (
+                       <FormField
+                        control={form.control}
+                        name={`canciones.${index}.artista_principal_nombre`}
+                        render={({ field: songField }) => (
+                          <FormItem>
+                            <FormLabel>Artista Canción {index + 1}</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Artista específico de esta canción" {...songField} defaultValue={songField.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                     <Button type="button" variant="destructive" size="sm" onClick={() => remove(index)}>
                       <Trash2 className="mr-2 h-4 w-4" /> Eliminar Canción
                     </Button>
@@ -301,7 +320,7 @@ export default function EditLpPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => append({ id_cancion: Date.now() + Math.random(), titulo: '', bpm: '' })}
+                  onClick={() => append({ id_cancion: Date.now() + Math.random(), titulo: '', bpm: '', artista_principal_nombre: '' })}
                 >
                   <PlusCircle className="mr-2 h-4 w-4" /> Agregar Otra Canción
                 </Button>

@@ -5,14 +5,14 @@ import type { Album } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import BpmIndicator from './BpmIndicator';
 import { Badge } from '@/components/ui/badge';
-import { ListMusic, Users, Tag, Disc } from 'lucide-react';
+import { ListMusic, Users, Tag, Disc, UserSquare } from 'lucide-react';
 
 interface AlbumCardProps {
   album: Album;
 }
 
 export default function AlbumCard({ album }: AlbumCardProps) {
-  const artistsDisplay = album.es_compilacion ? "Various Artists" : album.artistas.map(a => a.nombre).join(', ');
+  const artistsDisplay = album.es_compilacion ? "Varios Artistas" : album.artistas.map(a => a.nombre).join(', ');
 
   return (
     <Link href={`/album/${album.id_album}`} className="flex">
@@ -56,20 +56,24 @@ export default function AlbumCard({ album }: AlbumCardProps) {
                 <ListMusic className="w-4 h-4 mr-2 text-primary" /> Tracks
               </h4>
               <ul className="space-y-1 text-xs max-h-32 overflow-y-auto pr-2">
-                {album.canciones.slice(0, 5).map((cancion) => ( // Show up to 5 songs
-                  <li key={cancion.id_cancion} className="flex justify-between items-center">
-                    <span className="truncate pr-2" title={cancion.titulo}>
-                      {cancion.numero_pista ? `${cancion.numero_pista}. ` : ''}
-                      {cancion.titulo}
-                      {cancion.artista_principal_nombre && album.es_compilacion && (
-                        <span className="text-muted-foreground ml-1">({cancion.artista_principal_nombre})</span>
+                {album.canciones.slice(0, 5).map((cancion) => ( 
+                  <li key={cancion.id_cancion} className="flex justify-between items-start">
+                    <div className="flex-1 truncate pr-2">
+                      <span title={cancion.titulo}>
+                        {cancion.numero_pista ? `${cancion.numero_pista}. ` : ''}
+                        {cancion.titulo}
+                      </span>
+                      {album.es_compilacion && cancion.artista_principal_nombre && (
+                        <div className="text-muted-foreground ml-2 flex items-center text-[0.7rem]">
+                           <UserSquare className="w-2.5 h-2.5 mr-1"/> {cancion.artista_principal_nombre}
+                        </div>
                       )}
-                    </span>
+                    </div>
                     <BpmIndicator bpm={cancion.bpm} />
                   </li>
                 ))}
                  {album.canciones.length > 5 && (
-                  <li className="text-center text-muted-foreground text-xs pt-1">...and {album.canciones.length - 5} more tracks</li>
+                  <li className="text-center text-muted-foreground text-xs pt-1">...y {album.canciones.length - 5} más canciones</li>
                 )}
               </ul>
             </div>
