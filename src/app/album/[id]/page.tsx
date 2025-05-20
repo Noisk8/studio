@@ -1,23 +1,52 @@
 
 'use client';
 
+import { useState, useEffect } from 'react'; // Added useState, useEffect
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { mockAlbums } from '@/lib/mock-data';
+import { findAlbumById } from '@/lib/mock-data'; // Using findAlbumById
 import type { Album } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import BpmIndicator from '@/components/BpmIndicator';
-import { ArrowLeft, Users, Tag, Disc, CalendarDays, ListMusic, Info } from 'lucide-react';
+import { ArrowLeft, Users, Tag, Disc, CalendarDays, ListMusic, Info, RefreshCw } from 'lucide-react';
 
 export default function AlbumDetailPage() {
   const params = useParams();
   const router = useRouter();
   const albumId = params.id as string;
 
-  const album: Album | undefined = mockAlbums.find(a => a.id_album.toString() === albumId);
+  const [album, setAlbum] = useState<Album | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (albumId) {
+      const foundAlbum = findAlbumById(albumId);
+      setAlbum(foundAlbum);
+      setIsLoading(false);
+    }
+    // Listener for potential updates if this page stays open
+    const handleAlbumsUpdate = () => {
+      if (albumId) {
+        const updatedFoundAlbum = findAlbumById(albumId);
+        setAlbum(updatedFoundAlbum);
+      }
+    };
+    window.addEventListener('albumsUpdated', handleAlbumsUpdate);
+    return () => {
+      window.removeEventListener('albumsUpdated', handleAlbumsUpdate);
+    };
+  }, [albumId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <RefreshCw className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!album) {
     return (

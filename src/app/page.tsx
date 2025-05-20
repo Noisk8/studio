@@ -1,23 +1,39 @@
+
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import type { Album, Filters, SortKey, Artista, Genero } from '@/lib/types';
-import { mockAlbums, mockArtistas, mockGeneros } from '@/lib/mock-data';
+import { getAlbums, mockArtistas, mockGeneros } from '@/lib/mock-data'; // Updated import
 import AlbumCard from '@/components/AlbumCard';
 import FilterSortControls from '@/components/FilterSortControls';
-import { BPM_CATEGORIES } from '@/lib/types';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react'; // Added RefreshCw for loading
 
 export default function HomePage() {
-  const [allAlbums] = useState<Album[]>(mockAlbums);
-  const [allArtists] = useState<Artista[]>(mockArtistas);
-  const [allGenres] = useState<Genero[]>(mockGeneros);
-  
-  const [displayedAlbums, setDisplayedAlbums] = useState<Album[]>(allAlbums);
+  const [allAlbums, setAllAlbums] = useState<Album[]>([]);
+  const [displayedAlbums, setDisplayedAlbums] = useState<Album[]>([]);
   const [filters, setFilters] = useState<Filters>({});
   const [sortKey, setSortKey] = useState<SortKey>('title_asc');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true); // Added loading state
+
+  // Load initial albums and set up listener for updates
+  useEffect(() => {
+    const loadData = () => {
+      setAllAlbums(getAlbums());
+      setIsLoading(false);
+    };
+    loadData(); // Initial load
+
+    const handleAlbumsUpdate = () => {
+      loadData(); // Reload data on update
+    };
+
+    window.addEventListener('albumsUpdated', handleAlbumsUpdate);
+    return () => {
+      window.removeEventListener('albumsUpdated', handleAlbumsUpdate);
+    };
+  }, []);
 
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
@@ -32,6 +48,8 @@ export default function HomePage() {
   };
 
   useEffect(() => {
+    if (isLoading) return; // Don't filter/sort until data is loaded
+
     let filtered = [...allAlbums];
 
     // Search term filtering (album title, artist name)
@@ -82,13 +100,21 @@ export default function HomePage() {
       case 'year_old':
         filtered.sort((a, b) => (a.anio_lanzamiento || 0) - (b.anio_lanzamiento || 0));
         break;
-      // Add BPM average sorting if implemented
       default:
         break;
     }
 
     setDisplayedAlbums(filtered);
-  }, [allAlbums, filters, sortKey, searchTerm]);
+  }, [allAlbums, filters, sortKey, searchTerm, isLoading]);
+  
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+        <RefreshCw className="w-12 h-12 animate-spin text-primary mb-4" />
+        <p className="text-xl text-muted-foreground">Loading albums...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -109,8 +135,8 @@ export default function HomePage() {
       </div>
 
       <FilterSortControls
-        allArtists={allArtists}
-        allGenres={allGenres}
+        allArtists={mockArtistas} // These remain static mocks
+        allGenres={mockGeneros}   // These remain static mocks
         onFilterChange={handleFilterChange}
         onSortChange={handleSortChange}
         initialFilters={filters}

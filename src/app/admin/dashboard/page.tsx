@@ -1,17 +1,43 @@
 
 'use client';
 
+import { useState, useEffect } from 'react'; // Added useState, useEffect
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { mockAlbums } from '@/lib/mock-data'; // Using mock data for now
+import { getAlbums } from '@/lib/mock-data'; // Using getAlbums for persisted data
 import type { Album } from '@/lib/types';
-import { PlusCircle, Edit, Trash2, ListMusic } from 'lucide-react';
+import { PlusCircle, Edit, ListMusic, RefreshCw } from 'lucide-react';
 
 export default function AdminDashboardPage() {
-  const albums: Album[] = mockAlbums; // In a real app, this would come from a data source
+  const [albums, setAlbums] = useState<Album[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = () => {
+      setAlbums(getAlbums());
+      setIsLoading(false);
+    };
+    loadData();
+
+    const handleAlbumsUpdate = () => {
+      loadData();
+    };
+    window.addEventListener('albumsUpdated', handleAlbumsUpdate);
+    return () => {
+      window.removeEventListener('albumsUpdated', handleAlbumsUpdate);
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <RefreshCw className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -56,12 +82,13 @@ export default function AdminDashboardPage() {
                     <TableRow key={album.id_album}>
                       <TableCell>
                         <Image
-                          src={album.url_caratula}
+                          src={album.url_caratula || 'https://placehold.co/50x50.png'}
                           alt={album.titulo}
                           width={50}
                           height={50}
                           className="rounded aspect-square object-cover"
                           data-ai-hint="album cover"
+                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/50x50.png'; }}
                         />
                       </TableCell>
                       <TableCell className="font-medium">{album.titulo}</TableCell>
@@ -79,9 +106,6 @@ export default function AdminDashboardPage() {
                           </Link>
                         </Button>
                         {/* Delete button can be added later with confirmation */}
-                        {/* <Button variant="destructive" size="sm" onClick={() => alert('Eliminar: ' + album.titulo)}>
-                          <Trash2 className="mr-1 h-3 w-3" /> Eliminar
-                        </Button> */}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -89,7 +113,7 @@ export default function AdminDashboardPage() {
               </Table>
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">No hay álbumes para mostrar.</p>
+            <p className="text-muted-foreground text-center py-8">No hay álbumes para mostrar. Comienza agregando uno.</p>
           )}
         </CardContent>
       </Card>

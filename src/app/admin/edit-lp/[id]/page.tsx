@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,17 +10,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// import { Textarea } from '@/components/ui/textarea'; // Eliminado
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Save, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, PlusCircle, Trash2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { mockAlbums, mockGeneros, mockArtistas } from '@/lib/mock-data';
-import type { Album, Artista, Cancion } from '@/lib/types';
+import { findAlbumById, updateAlbum, mockGeneros, mockArtistas } from '@/lib/mock-data'; // Updated imports
+import type { Album, Artista } from '@/lib/types';
 
 const songSchema = z.object({
+  id_cancion: z.number().optional(), // Keep track of existing song IDs
   titulo: z.string().min(1, "El título de la canción es requerido."),
   bpm: z.coerce.number().positive("BPM debe ser un número positivo.").optional().or(z.literal('')),
 });
@@ -31,10 +31,9 @@ const albumFormSchema = z.object({
   anio_lanzamiento: z.coerce
     .number({ invalid_type_error: "El año debe ser un número.", required_error: "El año de lanzamiento es requerido." })
     .min(1900, "Año de lanzamiento inválido.")
-    .max(new Date().getFullYear() + 5, "Año de lanzamiento inválido."),
+    .max(new Date().getFullYear() + 15, "Año de lanzamiento inválido."),
   genero_nombre: z.string().min(1, "El género es requerido."),
-  url_caratula: z.string().url("URL de carátula inválida o vacía. Usar https://placehold.co/300x300.png si no hay URL.").or(z.literal('')).optional(),
-  // descripcion: z.string().optional(), // Eliminado
+  url_caratula: z.string().url("URL de carátula inválida. Usar https://placehold.co/300x300.png si no hay URL.").or(z.literal('')).optional(),
   canciones: z.array(songSchema).optional(),
 });
 
@@ -46,9 +45,8 @@ export default function EditLpPage() {
   const { toast } = useToast();
   const albumId = params.id as string;
 
-  // Find mutable album from mockAlbums for live update effect
-  const albumToEditIndex = mockAlbums.findIndex(album => album.id_album.toString() === albumId);
-  const albumToEdit = albumToEditIndex !== -1 ? mockAlbums[albumToEditIndex] : undefined;
+  const [isLoadingAlbum, setIsLoadingAlbum] = useState(true);
+  const [albumToEdit, setAlbumToEdit] = useState<Album | undefined>(undefined);
 
   const form = useForm<AlbumFormValues>({
     resolver: zodResolver(albumFormSchema),
@@ -58,7 +56,6 @@ export default function EditLpPage() {
       anio_lanzamiento: '' as unknown as number,
       genero_nombre: '',
       url_caratula: '',
-      // descripcion: '', // Eliminado
       canciones: [],
     },
   });
@@ -71,81 +68,91 @@ export default function EditLpPage() {
   const watchedCaratula = form.watch('url_caratula');
 
   useEffect(() => {
-    if (albumToEdit) {
-      form.reset({
-        titulo: albumToEdit.titulo,
-        artista: albumToEdit.es_compilacion ? "Various Artists" : albumToEdit.artistas.map(a => a.nombre).join(', '),
-        anio_lanzamiento: albumToEdit.anio_lanzamiento ?? ('' as unknown as number),
-        genero_nombre: albumToEdit.genero_nombre,
-        url_caratula: albumToEdit.url_caratula || '', // ensure empty string if null/undefined
-        // descripcion: albumToEdit.descripcion || '', // Eliminado
-        canciones: albumToEdit.canciones.map(c => ({ 
-          titulo: c.titulo, 
-          bpm: c.bpm ?? ''
-        })) || [],
-      });
-    } else if (!form.formState.isLoading) { // Prevent redirection if still loading
-      toast({ title: 'Error', description: 'Álbum no encontrado.', variant: 'destructive' });
-      router.push('/admin/dashboard');
+    if (albumId) {
+      const foundAlbum = findAlbumById(albumId);
+      setAlbumToEdit(foundAlbum);
+      if (foundAlbum) {
+        form.reset({
+          titulo: foundAlbum.titulo,
+          artista: foundAlbum.es_compilacion ? "Various Artists" : foundAlbum.artistas.map(a => a.nombre).join(', '),
+          anio_lanzamiento: foundAlbum.anio_lanzamiento ?? ('' as unknown as number),
+          genero_nombre: foundAlbum.genero_nombre,
+          url_caratula: foundAlbum.url_caratula || '',
+          canciones: foundAlbum.canciones.map(c => ({ 
+            id_cancion: c.id_cancion,
+            titulo: c.titulo, 
+            bpm: c.bpm ?? ''
+          })) || [],
+        });
+      } else {
+        toast({ title: 'Error', description: 'Álbum no encontrado.', variant: 'destructive' });
+        router.push('/admin/dashboard');
+      }
+      setIsLoadingAlbum(false);
     }
-  }, [albumToEdit, form, router, toast]);
+  }, [albumId, form, router, toast]);
 
   const onSubmit = (data: AlbumFormValues) => {
-    if (albumToEditIndex === -1) {
+    if (!albumToEdit) {
       toast({ title: 'Error', description: 'No se pudo actualizar el álbum.', variant: 'destructive' });
       return;
     }
 
     const isCompilation = data.artista.toLowerCase().includes('various');
     let artistsArray: Artista[];
-     if (isCompilation) {
+
+    if (isCompilation) {
         const va = mockArtistas.find(a => a.nombre.toLowerCase() === 'various artists');
-        artistsArray = va ? [va] : [{id_artista: Date.now() + Math.random(), nombre: 'Various Artists'}]
+        artistsArray = va ? [va] : [{id_artista: Date.now() + Math.random(), nombre: 'Various Artists'}];
     } else {
-        // Try to preserve original artist ID if single artist and name matches, otherwise new ID.
-        const existingArtist = albumToEdit?.artistas[0];
-        artistsArray = (existingArtist && existingArtist.nombre === data.artista && !albumToEdit?.es_compilacion) 
-                         ? [existingArtist] 
-                         : [{ id_artista: Date.now() + Math.random(), nombre: data.artista }];
+        let existingArtist = mockArtistas.find(a => a.nombre.toLowerCase() === data.artista.toLowerCase());
+        if (!existingArtist) {
+            existingArtist = { id_artista: albumToEdit.artistas[0]?.id_artista || Date.now() + Math.random(), nombre: data.artista };
+            // In a real app, new artists might be handled differently
+        }
+        artistsArray = [existingArtist];
     }
 
-    const updatedAlbum: Album = {
-      ...mockAlbums[albumToEditIndex], // Spread existing album data first
+    const updatedAlbumData: Album = {
+      ...albumToEdit, // Preserve existing fields like id_album, sello_id, etc.
       titulo: data.titulo,
       artistas: artistsArray,
       anio_lanzamiento: Number(data.anio_lanzamiento),
       genero_nombre: data.genero_nombre,
-      genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || mockAlbums[albumToEditIndex].genero_id,
+      genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || albumToEdit.genero_id,
       url_caratula: data.url_caratula || 'https://placehold.co/300x300.png',
-      // descripcion: data.descripcion, // Eliminado
       es_compilacion: isCompilation,
       canciones: data.canciones ? data.canciones.map((c, idx) => {
-        const existingSong = albumToEdit?.canciones.find(ec => ec.titulo === c.titulo);
         return {
-          id_cancion: existingSong?.id_cancion || Date.now() + idx + Math.random(),
+          id_cancion: c.id_cancion || Date.now() + idx + Math.random(), // Use existing ID or generate new
           titulo: c.titulo,
           bpm: c.bpm ? Number(c.bpm) : undefined,
-          artistas: artistsArray // Assign main album artists to songs for simplicity in mock
+          artistas: artistsArray 
         };
       }) : [],
     };
 
-    mockAlbums[albumToEditIndex] = updatedAlbum;
+    updateAlbum(albumToEdit.id_album, updatedAlbumData);
     
     toast({
       title: 'Álbum Actualizado',
-      description: `El álbum "${data.titulo}" ha sido actualizado exitosamente (simulación).`,
+      description: `El álbum "${data.titulo}" ha sido actualizado exitosamente.`,
     });
     router.push('/admin/dashboard');
   };
   
-  if (!albumToEdit && !form.formState.isLoading) {
-    // This case should be handled by useEffect redirecting, but as a fallback.
-    return <div className="flex items-center justify-center h-screen">Álbum no encontrado. Redirigiendo...</div>;
+  if (isLoadingAlbum) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <RefreshCw className="w-12 h-12 animate-spin text-primary" />
+        <span className="ml-4 text-lg">Cargando datos del álbum...</span>
+      </div>
+    );
   }
   
-  if (form.formState.isLoading && !albumToEdit) { // Initial load before useEffect kicks in
-    return <div className="flex items-center justify-center h-screen">Cargando datos del álbum...</div>;
+  if (!albumToEdit) {
+    // This case should be handled by useEffect redirecting, but as a fallback.
+    return <div className="flex items-center justify-center h-screen">Álbum no encontrado. Redirigiendo...</div>;
   }
   
   return (
@@ -241,13 +248,13 @@ export default function EditLpPage() {
                     {watchedCaratula && (
                       <div className="mt-2">
                         <Image
-                          src={watchedCaratula || 'https://placehold.co/100x100.png'} // Fallback if watchedCaratula is empty string
+                          src={watchedCaratula || 'https://placehold.co/100x100.png'}
                           alt="Vista previa de carátula"
                           width={100}
                           height={100}
                           className="rounded object-cover aspect-square"
                           data-ai-hint="album cover"
-                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/100x100.png'; }} // Fallback for broken links
+                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/100x100.png'; }}
                         />
                       </div>
                     )}
@@ -255,21 +262,6 @@ export default function EditLpPage() {
                   </FormItem>
                 )}
               />
-              {/*
-              <FormField
-                control={form.control}
-                name="descripcion"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descripción (Opcional)</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              */}
 
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Canciones</Label>
@@ -309,7 +301,7 @@ export default function EditLpPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => append({ titulo: '', bpm: '' })}
+                  onClick={() => append({ id_cancion: Date.now() + Math.random(), titulo: '', bpm: '' })}
                 >
                   <PlusCircle className="mr-2 h-4 w-4" /> Agregar Otra Canción
                 </Button>
