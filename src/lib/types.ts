@@ -4,7 +4,7 @@ export interface Sello {
   nombre: string;
   pais?: string;
   fecha_fundacion?: string; // Date as string
-  descripcion?: string;
+  // descripcion?: string; // Eliminado
 }
 
 export interface Artista {
@@ -55,7 +55,7 @@ export interface Album {
   formato?: string; // e.g., "LP", "CD", "Digital"
   numero_catalogo?: string;
   es_compilacion?: boolean;
-  descripcion?: string;
+  // descripcion?: string; // Eliminado
   fecha_adquisicion?: string; // Date as string
   artistas: Artista[]; // Can be one or many
   canciones: Cancion[];

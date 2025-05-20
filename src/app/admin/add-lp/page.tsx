@@ -1,21 +1,23 @@
 
 'use client';
 
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+// import { Textarea } from '@/components/ui/textarea'; // Eliminado
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { mockGeneros } from '@/lib/mock-data'; // Assuming mockGeneros is available for selection
+import { mockGeneros, mockAlbums, mockArtistas } from '@/lib/mock-data';
+import type { Album, Artista, Cancion } from '@/lib/types';
 
 const songSchema = z.object({
   titulo: z.string().min(1, "El título de la canción es requerido."),
@@ -30,8 +32,8 @@ const albumFormSchema = z.object({
     .min(1900, "Año de lanzamiento inválido.")
     .max(new Date().getFullYear() + 5, "Año de lanzamiento inválido."),
   genero_nombre: z.string().min(1, "El género es requerido."),
-  url_caratula: z.string().url("URL de carátula inválida.").optional().or(z.literal('')),
-  descripcion: z.string().optional(),
+  url_caratula: z.string().url("URL de carátula inválida o vacía. Usar https://placehold.co/300x300.png si no hay URL.").or(z.literal('')).optional(),
+  // descripcion: z.string().optional(), // Eliminado
   canciones: z.array(songSchema).optional(),
 });
 
@@ -46,10 +48,10 @@ export default function AddLpPage() {
     defaultValues: {
       titulo: '',
       artista: '',
-      anio_lanzamiento: '' as unknown as number, // Initialize as empty string for controlled input
+      anio_lanzamiento: '' as unknown as number,
       genero_nombre: '',
       url_caratula: '',
-      descripcion: '',
+      // descripcion: '', // Eliminado
       canciones: [{ titulo: '', bpm: '' }],
     },
   });
@@ -59,12 +61,43 @@ export default function AddLpPage() {
     name: 'canciones',
   });
 
+  const watchedCaratula = form.watch('url_caratula');
+
   const onSubmit = (data: AlbumFormValues) => {
-    console.log('Album data to add:', data);
-    // In a real app, you would send this data to your backend.
-    // For this prototype, we just show a success message and redirect.
+    const isCompilation = data.artista.toLowerCase().includes('various');
+    let artistsArray: Artista[];
+
+    if (isCompilation) {
+        const va = mockArtistas.find(a => a.nombre.toLowerCase() === 'various artists');
+        artistsArray = va ? [va] : [{id_artista: Date.now() + Math.random(), nombre: 'Various Artists'}]
+    } else {
+        artistsArray = [{ id_artista: Date.now() + Math.random(), nombre: data.artista }];
+    }
+    
+    const newAlbumData: Album = {
+      id_album: mockAlbums.length > 0 ? Math.max(...mockAlbums.map(a => a.id_album)) + 1 : 1,
+      titulo: data.titulo,
+      artistas: artistsArray,
+      anio_lanzamiento: Number(data.anio_lanzamiento),
+      genero_nombre: data.genero_nombre,
+      genero_id: mockGeneros.find(g => g.nombre === data.genero_nombre)?.id_genero || 0,
+      url_caratula: data.url_caratula || 'https://placehold.co/300x300.png',
+      // descripcion: data.descripcion, // Eliminado
+      canciones: data.canciones ? data.canciones.map((c, idx) => ({
+        id_cancion: Date.now() + idx + Math.random(), // Asegurar ID único
+        titulo: c.titulo,
+        bpm: c.bpm ? Number(c.bpm) : undefined,
+      })) : [],
+      sello_id: mockAlbums[0]?.sello_id || 1, // Simulado
+      sello_nombre: mockAlbums[0]?.sello_nombre || 'MockSello', // Simulado
+      formato: 'LP', // Simulado
+      es_compilacion: isCompilation,
+    };
+
+    mockAlbums.push(newAlbumData);
+    
     toast({
-      title: 'Álbum Agregado (Simulado)',
+      title: 'Álbum Agregado',
       description: `El álbum "${data.titulo}" ha sido agregado exitosamente (simulación).`,
     });
     router.push('/admin/dashboard');
@@ -110,7 +143,7 @@ export default function AddLpPage() {
                   <FormItem>
                     <FormLabel>Artista(s)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: The Beatles" {...field} />
+                      <Input placeholder="Ej: The Beatles o Various Artists" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -160,10 +193,23 @@ export default function AddLpPage() {
                     <FormControl>
                       <Input type="url" placeholder="https://placehold.co/300x300.png" {...field} />
                     </FormControl>
+                     {watchedCaratula && (
+                        <div className="mt-2">
+                           <Image
+                            src={watchedCaratula || 'https://placehold.co/100x100.png'}
+                            alt="Vista previa de carátula"
+                            width={100}
+                            height={100}
+                            className="rounded object-cover aspect-square"
+                            data-ai-hint="album cover"
+                          />
+                        </div>
+                      )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              {/* 
               <FormField
                 control={form.control}
                 name="descripcion"
@@ -176,7 +222,8 @@ export default function AddLpPage() {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> 
+              */}
 
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Canciones</Label>
